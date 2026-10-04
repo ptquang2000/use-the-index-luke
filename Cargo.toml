@@ -1,0 +1,9 @@
+[package]
+name = "util"
+version = "0.1.0"
+edition = "2015"
+build = "build.rs"
+
+[[bin]]
+name = "win32_util"
+path = "win32_util.rs"
