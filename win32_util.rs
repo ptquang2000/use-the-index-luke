@@ -1,8 +1,6 @@
-#[path = "util_query.rs"]
-mod query;
-use query::*;
-
-use std::io::Write;
+#[path = "util.rs"]
+mod util;
+use util::*;
 
 #[repr(C)]
 struct sqlite3 {
@@ -62,12 +60,12 @@ unsafe extern "system" fn callback(
     0
 }
 
-fn create_table_with_1000_rows(database: *mut sqlite3) {
+fn query_database(database: *const (), query: *const u8) {
     let mut err_msg = std::ptr::null_mut();
     unsafe {
         if sqlite3_exec(
-            database,
-            EMPLOYEES_TABLE_WITH_1000_ENTRIES.as_ptr() as *const _,
+            database.cast_mut() as _,
+            query as *const _,
             Some(callback),
             std::ptr::null_mut(),
             std::ptr::addr_of_mut!(err_msg),
@@ -87,56 +85,11 @@ fn create_table_with_1000_rows(database: *mut sqlite3) {
     }
 }
 
-fn select_employee_by_id(database: *mut sqlite3, execution_plan: bool, employee_id: i32) {
-    let mut buffer = [0u8; 256];
-    let mut temp = &mut buffer as &mut [u8];
-    write!(
-        temp,
-        "
-{}
-SELECT first_name, last_name
-  FROM employees
- WHERE employee_id = {}\0",
-        if execution_plan {
-            "EXPLAIN QUERY PLAN"
-        } else {
-            ""
-        },
-        employee_id
-    )
-    .expect("Failed to write buffer.");
-    let mut err_msg = std::ptr::null_mut();
-    unsafe {
-        if sqlite3_exec(
-            database,
-            buffer.as_ptr() as *const _,
-            Some(callback),
-            std::ptr::null_mut(),
-            std::ptr::addr_of_mut!(err_msg),
-        ) == 0
-        {
-        } else {
-            OutputDebugStringA(err_msg);
-        }
-    }
-}
-
 fn reset_database(database: *mut sqlite3) {
     const SQLITE_DBCONFIG_RESET_DATABASE: i32 = 1009;
     unsafe {
-        let mut err_msg = std::ptr::null_mut();
         sqlite3_db_config(database, SQLITE_DBCONFIG_RESET_DATABASE, 1, 0);
-        if sqlite3_exec(
-            database,
-            "VACUUM\0".as_ptr() as *const _,
-            None,
-            std::ptr::null_mut(),
-            std::ptr::addr_of_mut!(err_msg),
-        ) == 0
-        {
-        } else {
-            OutputDebugStringA(err_msg);
-        }
+        query_database(database.cast::<()>(), "VACUUM\0".as_ptr());
         sqlite3_db_config(database, SQLITE_DBCONFIG_RESET_DATABASE, 0, 0);
     }
 }
@@ -150,10 +103,17 @@ fn main() {
         ) == 0
         {
             reset_database(database);
-            create_table_with_1000_rows(database);
 
-            select_employee_by_id(database, true, 123);
-            select_employee_by_id(database, false, 123);
+            let util = UtilMemory {
+                db: database as _,
+                query: Some(query_database),
+            };
+
+            create_table_with_1000_rows(&util);
+            select_employee_by_id(&util, true, 123);
+            select_employee_by_id(&util, false, 123);
+
+            merge_with_very_big_company(&util);
 
             sqlite3_close(database);
         } else {

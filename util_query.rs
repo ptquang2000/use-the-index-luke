@@ -62,3 +62,76 @@ UPDATE employees
 
 ANALYZE employees;
         \0";
+
+pub const MERGER_WITH_VERY_BIG_COMPANY: &str = "
+DROP TABLE employees;
+CREATE TABLE employees (
+   employee_id   NUMERIC      NOT NULL,
+   first_name    VARCHAR(255) NOT NULL,
+   last_name     VARCHAR(255) NOT NULL,
+   date_of_birth DATE                 ,
+   phone_number  VARCHAR(255) NOT NULL,
+   junk          CHAR(255)            ,
+   subsidiary_id NUMERIC      NOT NULL,
+   CONSTRAINT employees_pk PRIMARY KEY (employee_id, subsidiary_id)
+);
+INSERT INTO employees (employee_id,  first_name,
+                       last_name,    date_of_birth, 
+                       phone_number, junk, subsidiary_id)
+SELECT gen.n +1,
+       CHAR( ABS(random()) % 26 + 65
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           ),
+       CHAR( ABS(random()) % 26 + 65
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           ),
+       DATE('now', '-' || (abs(random()) % 3650 + 40*365) || ' day'),
+       ABS(RANDOM())%9000+1000,
+       printf('%.1000c','x'),
+       30
+  FROM generator_4k gen
+ WHERE gen.n < 1000;
+UPDATE employees 
+   SET first_name='MARKUS', 
+       last_name='WINAND'
+ WHERE employee_id=123
+   AND subsidiary_id=30;
+-- generate more records (Very Big Company)
+INSERT INTO employees (employee_id,  first_name, 
+                       last_name,    date_of_birth, 
+                       phone_number, subsidiary_id, junk)
+SELECT gen.n + 1,
+       CHAR( ABS(random()) % 26 + 65
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           ),
+       CHAR( ABS(random()) % 26 + 65
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           , ABS(random()) % 26 + 97
+           ),
+       DATE('now', '-' || (abs(random()) % 3650 + 40*365) || ' day'),
+       ABS(RANDOM())%9000+1000,
+       CAST(ABS(RANDOM())%(gen.n/9000.0 * 29 + 1) + 1 AS INTEGER),
+       printf('%.10c','x')
+  FROM generator_64k gen
+ WHERE gen.n < 9000;
+ANALYZE employees;
+    \0";
