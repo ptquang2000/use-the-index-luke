@@ -1,6 +1,12 @@
 vim.keymap.set("n", "<leader>m", function()
   vim.fn.mkdir("build", "p")
-  vim.opt_local.makeprg = "pwsh -NoProfile -ExecutionPolicy Bypass -File build.ps1"
+  if vim.fn.has("win32") == 1 then
+    vim.opt_local.makeprg = "pwsh -NoProfile -ExecutionPolicy Bypass -File build.ps1"
+  elseif vim.fn.has("linux") == 1 then
+    vim.opt_local.makeprg = "sh build.sh"
+  else
+  end
+
 
   local start = vim.uv.now()
   vim.cmd("silent make!")

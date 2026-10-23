@@ -7,3 +7,7 @@ build = "build.rs"
 [[bin]]
 name = "win32_util"
 path = "win32_util.rs"
+
+[[bin]]
+name = "linux_util"
+path = "linux_util.rs"
